@@ -72,56 +72,6 @@ datp_clean$S2 <- as.POSIXct(datp_clean$S2, format = "%Y-%m-%d %H:%M")
 
 datp_clean <- datp_clean %>% mutate(Departure_Time = format(datp_clean$Act_Departure, "%H:%M:%S"))
 
-# show_flags <- function(df, yr){
-#   df_new <- df
-#   if(yr == 1){
-#     df_new$Act_Departure <- as.POSIXct(df_new$Act_Departure, format = "%Y-%m-%d %H:%M")
-#     df_new$Sch_Departure <- as.POSIXct(df_new$Sch_Departure, format = "%Y-%m-%d %H:%M")
-#     df_new$S2 <- as.POSIXct(df_new$S2, format = "%Y-%m-%d %H:%M")
-#     df_new$Departure_Time <- as.POSIXct(df_new$Departure_Time, "%H:%M:%S", tz = "UTC")
-#     
-#   }
-#   else{
-#     df_new$Act_Departure <- as.POSIXct(df_new$Act_Departure, format = "%Y-%m-%d %H:%M:%S")
-#     df_new$Sch_Departure <- as.POSIXct(df_new$Sch_Departure, format = "%Y-%m-%d %H:%M:%S")
-#     df_new$S2 <- as.POSIXct(df_new$S2, format = "%Y-%m-%d %H:%M:%S")
-#     
-#   }
-#   if(yr == 0){
-#     df_new$Departure_Time <- as.POSIXct(df_new$Departure_Time, origin = "1970-01-01", tz = "UTC")
-#   }
-#   
-#   # Convert to Date Format
-#   
-#   if(yr != 2){
-#     df_new <- df_new %>% mutate(WT_Flag = ifelse(is.na(Wait_Time), 1, 0))
-#     df_new <- df_new %>% mutate(S2_Sch_Flag = ifelse(S2 <= Sch_Departure, 0, 1))
-#     df_new <- df_new %>% mutate(S2_Act_Flag = ifelse(S2 <= Act_Departure, 0, 1))
-#     df_new <- df_new %>% mutate(Sch_Act_Flag = ifelse(Sch_Departure <= Act_Departure, 0, 1))
-#     df_new <- df_new %>% mutate(Delay_in_Seconds = as.integer(Act_Departure - Sch_Departure))
-#   }
-#   return(df_new)
-# }
-
-
-# table(basa$Season)
-# 
-# hist(datf$max)
-# 
-# weekend <- datf %>% group_by(Period_of_Week, Time_of_Day, Season) %>% 
-#   summarise(mean_wait = mean(mean, na.rm = TRUE))
-# 
-# 
-# season <- datf %>% group_by(Time_of_Day) %>% 
-#   summarise(mean_wait = mean(mean, na.rm = TRUE))
-
-
-# Basa Cleaning
-
-
-# basa_clean <- show_flags(basa, 0)
-# datp_clean <- show_flags(datp, 2)
-# years_clean <- show_flags(years, 1)
 
 # Merge Datasets
 merged_df <- bind_rows(basa_clean, datp_clean, years_clean)
@@ -149,6 +99,9 @@ saf_sub <- saf_sub[complete.cases(saf_sub),]
 
 
 calc_service_rate <- function(lambda, wait, c){
+  if(is.na(c)){
+    return(NA)
+  }
   if(c == 1){
     return(1/wait + lambda)
   }
@@ -198,92 +151,51 @@ arrival_rate_on_time <- function(df, time, period){
                                                Mode(df_new$C0)[1])))
 }
 
-arrival_rate_on_time(auc_sub, 12, "1 - WEEKDAY")
+arrival_rate_on_time(auc_sub, 8, "1 - WEEKDAY")
 
-#data.frame(Time_of_day = c("0:00 - 3:59", "4:00-7:59", "8:00-11:59", "12:00-15:59", "16:00-19:59", "20:00-23:59"),
-#          Arrival_rate = c())
 
-saf_arrival <- c()
-saf_departure <- c()
 
-arrival <- c()
-departure <- c()
-servers <- c()
-
-for(i in c(2,3,4,5)){
-  rates <- arrival_rate_on_time(auc_sub, i*4, "2 - WEEKEND")
-  arrival <- append(arrival, round(rates$Arrival_Rate,3))
-  departure <- append(departure, round(rates$Departure_Rate, 3))
-  servers <- append(servers, rates$Mode_Servers)
+get_rate_df <- function(df, day_of_week){
+  arrival <- c()
+  departure <- c()
+  servers <- c()
+  
+  for(i in 0:5){
+    rates <- arrival_rate_on_time(df, i*4, day_of_week)
+    arrival <- append(arrival, round(rates$Arrival_Rate,3))
+    departure <- append(departure, round(rates$Service_Rate, 3))
+    servers <- append(servers, rates$Mode_Servers)
+  }
+  
+  df_result <- data.frame(Arrival_Rates = arrival,
+                          Departure_Rates = departure,
+                          Servers = servers)
+  return(df_result)
 }
 
-df_result <- data.frame(Arrival_Rates = arrival,
-                        Departure_Rates = departure,
-                        Servers = servers)
 
-
-calc_service_rate <- function(lambda, wait, c){
-  if(c == 1){
-    return(1/wait + lambda)
-  }
-  # try out u values
-  
-  vals <- seq(0.1,2.5, by = 1/1000)
-  
-  diff <- c()
-  
-  for(i in vals){
-    mu <- i
-    rho <- lambda/(c*mu)
-    
-    if (rho >= 1) {
-      diff <- append(diff, Inf)
-    }
-    else{
-      
-      n <- 0:(c - 1)
-      sum_part <- sum((1 / factorial(n)) * (lambda / mu)^n)
-      tail_part <- (1 / factorial(c)) * (lambda / mu)^c * ((c * mu) / ((c * mu) - lambda))
-      P0 <- 1 / (sum_part + tail_part)
-      
-      Pq <- (1 / factorial(c)) * (lambda / mu)^c * ((c * mu) / ((c * mu) - lambda)) * P0
-      
-      Wq <- Pq / ((c * mu) - lambda)
-      W <- Wq + (1 / mu)
-      
-      
-      diff <- append(diff, abs(W - wait))
-    }
-  }
-  return(vals[which.min(diff)])
-}
-
-calc_service_rate(2.044792, 6.091244, 1)
+get_rate_df(auc_sub, "1 - WEEKDAY")
+get_rate_df(auc_sub, "2 - WEEKEND")
+get_rate_df(saf_sub, "1 - WEEKDAY")
+get_rate_df(saf_sub, "2 - WEEKEND")
 
 
 
 
-df_auc <- data.frame(Departure_Date = unique(auc_sub$Departure_Date),
-                     Arrival_Rate = add_arrival_rate(auc_sub))
-
-df_saf <- data.frame(Departure_Date = unique(saf_sub$Departure_Date),
-                     Arrival_Rate = add_arrival_rate(saf_sub))
-
-time_duration_auc <- as.numeric(difftime(max(auc_sub$S2), min(auc_sub$S2), units = "mins"))
-time_duration_saf <- as.numeric(difftime(max(saf_sub$S2), min(saf_sub$S2), units = "mins"))
 
 
 
 
-lambda_auc <- nrow(auc_sub)/time_duration_auc
-lambda_saf <- nrow(saf_sub)/time_duration_saf
-
-mu_auc <- 1 / mean(auc_sub$Wait_Time)
-mu_saf <- 1 / mean(saf_sub$Wait_Time)
-
-
-model_auc <- NewInput.MMC(lambda = lambda_auc, mu = mu_auc, c = 6,  n = 0)
-model_saf <- NewInput.MMC(lambda = lambda_saf, mu = mu_saf, c = 3, n = 0)
-
-out_saf <- QueueingModel(model_saf)
-out_auc <- QueueingModel(model_auc)
+# 
+# lambda_auc <- nrow(auc_sub)/time_duration_auc
+# lambda_saf <- nrow(saf_sub)/time_duration_saf
+# 
+# mu_auc <- 1 / mean(auc_sub$Wait_Time)
+# mu_saf <- 1 / mean(saf_sub$Wait_Time)
+# 
+# 
+# model_auc <- NewInput.MMC(lambda = lambda_auc, mu = mu_auc, c = 6,  n = 0)
+# model_saf <- NewInput.MMC(lambda = lambda_saf, mu = mu_saf, c = 3, n = 0)
+# 
+# out_saf <- QueueingModel(model_saf)
+# out_auc <- QueueingModel(model_auc)
