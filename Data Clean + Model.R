@@ -4,6 +4,7 @@ library(ggplot2)
 library(dplyr)
 library(queueing)
 library(tidyverse)
+library(DescTools)
 
 
 datp  <- read.csv("C:/Users/steve/Documents/R Projects/dat_P_sub_c (2).csv")
@@ -147,16 +148,38 @@ saf_sub <- saf_clean %>% select(c("S1", "S2", "Wait_Time", "C_Start", "C0", "C_a
 saf_sub <- saf_sub[complete.cases(saf_sub),]
 
 
-add_arrival_rate <- function(df){
-  dates <- unique(df$Departure_Date)
-  arrival_rates <- c()
-  for(i in 1:length(unique(df$Departure_Date))){
-    df_new <- df %>% filter(Departure_Date == dates[i])
-    duration <- as.numeric(difftime(max(df_new$S2), min(df_new$S2), units = "mins"))
-    rate <- nrow(df_new)/duration
-    arrival_rates <- append(arrival_rates, rate)
+calc_service_rate <- function(lambda, wait, c){
+  if(c == 1){
+    return(1/wait + lambda)
   }
-  return(arrival_rates)
+  # try out u values
+  
+  vals <- seq(0.1,2.5, by = 1/1000)
+  diff <- c()
+  for(i in vals){
+    mu <- i
+    rho <- lambda/(c*mu)
+    
+    if (rho >= 1) {
+      diff <- append(diff, Inf)
+    }
+    else{
+      
+      n <- 0:(c - 1)
+      sum_part <- sum((1 / factorial(n)) * (lambda / mu)^n)
+      tail_part <- (1 / factorial(c)) * (lambda / mu)^c * ((c * mu) / ((c * mu) - lambda))
+      P0 <- 1 / (sum_part + tail_part)
+      
+      Pq <- (1 / factorial(c)) * (lambda / mu)^c * ((c * mu) / ((c * mu) - lambda)) * P0
+      
+      Wq <- Pq / ((c * mu) - lambda)
+      W <- Wq + (1 / mu)
+      
+      
+      diff <- append(diff, abs(W - wait))
+    }
+  }
+  return(vals[which.min(diff)])
 }
 
 
@@ -164,18 +187,84 @@ arrival_rate_on_time <- function(df, time, period){
   df_new <- df %>% mutate(Hour = as.integer(substr(Departure_Time, start = 1, stop = 2)))
   df_new <- df_new %>% filter(between(Hour, time, time+3))
   df_new <- df_new %>% filter(Period_of_Week == period)
-  time_duration <- as.numeric(difftime(max(auc_sub$S2), min(auc_sub$S2), units = "mins"))
+  time_duration <- length(unique(df_new$Departure_Date))*(4*60)
   
   
-  return(list(Arrival_rate = nrow(df_new)/time_duration,
-              Departure_Rate = 1/mean(df_new$Wait_Time)))
+  return(list(Arrival_Rate = nrow(df_new)/time_duration,
+              Wait_Time = mean(df_new$Wait_Time),
+              Average_Servers = mean(df_new$C_avg),
+              Mode_Servers = Mode(df_new$C0)[1],
+              Service_Rate = calc_service_rate(nrow(df_new)/time_duration, mean(df_new$Wait_Time), 
+                                               Mode(df_new$C0)[1])))
 }
 
-arrival_rate_on_time(auc_sub, 8, "2 - WEEKEND")
+arrival_rate_on_time(auc_sub, 12, "1 - WEEKDAY")
+
+#data.frame(Time_of_day = c("0:00 - 3:59", "4:00-7:59", "8:00-11:59", "12:00-15:59", "16:00-19:59", "20:00-23:59"),
+#          Arrival_rate = c())
+
+saf_arrival <- c()
+saf_departure <- c()
+
+arrival <- c()
+departure <- c()
+servers <- c()
+
+for(i in c(2,3,4,5)){
+  rates <- arrival_rate_on_time(auc_sub, i*4, "2 - WEEKEND")
+  arrival <- append(arrival, round(rates$Arrival_Rate,3))
+  departure <- append(departure, round(rates$Departure_Rate, 3))
+  servers <- append(servers, rates$Mode_Servers)
+}
+
+df_result <- data.frame(Arrival_Rates = arrival,
+                        Departure_Rates = departure,
+                        Servers = servers)
+
+
+calc_service_rate <- function(lambda, wait, c){
+  if(c == 1){
+    return(1/wait + lambda)
+  }
+  # try out u values
+  
+  vals <- seq(0.1,2.5, by = 1/1000)
+  
+  diff <- c()
+  
+  for(i in vals){
+    mu <- i
+    rho <- lambda/(c*mu)
+    
+    if (rho >= 1) {
+      diff <- append(diff, Inf)
+    }
+    else{
+      
+      n <- 0:(c - 1)
+      sum_part <- sum((1 / factorial(n)) * (lambda / mu)^n)
+      tail_part <- (1 / factorial(c)) * (lambda / mu)^c * ((c * mu) / ((c * mu) - lambda))
+      P0 <- 1 / (sum_part + tail_part)
+      
+      Pq <- (1 / factorial(c)) * (lambda / mu)^c * ((c * mu) / ((c * mu) - lambda)) * P0
+      
+      Wq <- Pq / ((c * mu) - lambda)
+      W <- Wq + (1 / mu)
+      
+      
+      diff <- append(diff, abs(W - wait))
+    }
+  }
+  return(vals[which.min(diff)])
+}
+
+calc_service_rate(2.044792, 6.091244, 1)
+
+
 
 
 df_auc <- data.frame(Departure_Date = unique(auc_sub$Departure_Date),
-                      Arrival_Rate = add_arrival_rate(auc_sub))
+                     Arrival_Rate = add_arrival_rate(auc_sub))
 
 df_saf <- data.frame(Departure_Date = unique(saf_sub$Departure_Date),
                      Arrival_Rate = add_arrival_rate(saf_sub))
