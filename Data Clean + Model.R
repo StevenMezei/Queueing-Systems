@@ -119,22 +119,22 @@ calc_service_rate <- function(lambda, wait, c){
     else{
       
       n <- 0:(c - 1)
-      sum_part <- sum((1 / factorial(n)) * (lambda / mu)^n)
-      tail_part <- (1 / factorial(c)) * (lambda / mu)^c * ((c * mu) / ((c * mu) - lambda))
-      P0 <- 1 / (sum_part + tail_part)
+      sum_part <- sum((c*rho^n / factorial(n)))
+      tail_part <- (1 / factorial(c)) * (c*rho)^c / (1-rho)
+      P0 <- 1 / (1 + sum_part + tail_part)
       
-      Pq <- (1 / factorial(c)) * (lambda / mu)^c * ((c * mu) / ((c * mu) - lambda)) * P0
+      Pc <- P0*(c*rho)^c / (factorial(c) * (1-rho))
       
-      Wq <- Pq / ((c * mu) - lambda)
-      W <- Wq + (1 / mu)
+      Lq <- rho * Pc / (1-rho) 
       
+      L <- Lq + lambda/mu
       
+      W <- L/lambda
       diff <- append(diff, abs(W - wait))
     }
   }
   return(vals[which.min(diff)])
 }
-
 
 arrival_rate_on_time <- function(df, time, period){
   df_new <- df %>% mutate(Hour = as.integer(substr(Departure_Time, start = 1, stop = 2)))
@@ -181,8 +181,36 @@ get_rate_df(saf_sub, "2 - WEEKEND")
 
 
 
+arrival_rate_on_time(auc_sub, 12, "1 - WEEKDAY")
 
 
+
+avg_wait <- merged_clean %>%
+  filter(Airfield %in% c("AUC", "SAF")) %>%
+  group_by(`Time_of_Day`, `Period_of_Week`, `Airfield`) %>%
+  summarise(Average_Wait = mean(`Wait_Time`, na.rm = TRUE))
+
+  
+
+
+
+ggplot(avg_wait,
+       aes(x = `Time_of_Day`,
+           y = Average_Wait,
+           fill = `Airfield`)) +
+  geom_col(position = "dodge") +
+  facet_wrap(~`Period_of_Week`) +
+  scale_fill_manual(values = c(
+    "AUC" = "steelblue",   # Blue
+    "SAF" = "red"    # Red
+  )) +
+  labs(
+    title = "Average Wait Time by Time Period",
+    x = "Time Period",
+    y = "Average Wait Time (Minutes)",
+    fill = "Airfield"
+  ) +
+  theme_minimal()
 
 
 
