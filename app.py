@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 import queueing
+import ciw
 
 # =========================
 # CONFIG
