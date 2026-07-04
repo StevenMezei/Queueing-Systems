@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
+import queueing
 
 # =========================
 # CONFIG
@@ -138,8 +139,6 @@ mode = st.sidebar.toggle("Simulation Mode", True)
 st.sidebar.markdown("---")
 st.sidebar.info("System Live 🟢")
 
-
-
 # =========================
 # SYSTEM OVERVIEW (FIXED UI)
 # =========================
@@ -173,19 +172,21 @@ with col2:
         🚦 Security Checkpoints: <b style="color:#1E3A8A;">3 Active</b>
     </div>
     """, unsafe_allow_html=True)
-    
+
 # =========================
 # LIVE DATA
 # =========================
-wait_time = np.random.randint(5, 45)
-queue = np.random.randint(60, 250)
-arrivals = np.random.randint(200, 600)
-util = np.random.randint(60, 95)
+model = queueing.Model(datetime.now(), airport)
+wait_time = model.waiting_time
+queue = model.L
+arrivals = model.arrival_rate
+server = model.servers
 
 # =========================
 # KPI ROW
 # =========================
 c1, c2, c3, c4 = st.columns(4)
+
 
 def kpi(label, value):
     st.markdown(f"""
@@ -194,6 +195,7 @@ def kpi(label, value):
         <div class="kpi-value">{value}</div>
     </div>
     """, unsafe_allow_html=True)
+
 
 with c1:
     kpi("WAIT TIME (CORE)", f"{wait_time} min")
@@ -205,7 +207,7 @@ with c3:
     kpi("Passengers/hr", arrivals)
 
 with c4:
-    kpi("Utilization", f"{util}%")
+    kpi("Number of Servers", server)
 
 st.markdown("---")
 
