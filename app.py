@@ -5,7 +5,9 @@ import plotly.graph_objects as go
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 import queueing
-import ciw
+import math
+
+from queueing import Model
 
 # =========================
 # CONFIG
@@ -105,14 +107,47 @@ st.sidebar.markdown("---")
 st.sidebar.info("System Live 🟢")
 
 # =========================
+# UPDATE BOOLEAN
+# =========================
+current_time = datetime.now()
+current_block_auc = math.floor(current_time.hour/4)
+current_block_saf = math.floor(current_time.hour/4)
+
+
+
+# =========================
 # LIVE DATA
 # =========================
-model = queueing.Model(datetime.now(), airport)
-wait_time = model.waiting_time
-queue = model.L
-arrivals = model.arrival_rate
+
+if "last_block_auc" not in st.session_state:
+    st.session_state.last_block_auc = None
+    st.session_state.model_auc = None
+
+if "last_block_saf" not in st.session_state:
+    st.session_state.last_block_saf = None
+    st.session_state.model_saf = None
+
+if st.session_state.last_block_auc != current_block_auc:
+    st.session_state.model_auc = queueing.Model(current_time, "AUC")
+    st.session_state.last_block_auc = current_block_auc
+
+if st.session_state.last_block_saf != current_block_saf:
+    st.session_state.model_saf = queueing.Model(current_time, "SAF")
+    st.session_state.last_block_saf = current_block_saf
+
+
+if airport == "AUC":
+    model = st.session_state.model_auc
+else:
+    model = st.session_state.model_saf
+
+
+wait_time = round(model.estimate_waiting_time(current_time), 2)
+queue = model.find_num_in_queue(current_time)
+arrivals = round(model.arrival_rate * 60, 2)
 server = model.servers
 max_wait = model.max_wait
+
 
 # =========================
 # TITLE
@@ -204,7 +239,7 @@ def kpi(label, value):
     """, unsafe_allow_html=True)
 
 with c1:
-    kpi("WAIT TIME (CORE)", f"{wait_time} min")
+    kpi("WAIT TIME (ESTIMATE)", f"{wait_time} min")
 
 with c2:
     kpi("Queue Length", queue)
