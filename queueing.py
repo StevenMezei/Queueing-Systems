@@ -97,6 +97,7 @@ class Model:
             if air == "SAF":
                 df.to_csv("output_saf.csv", index=False)
 
+
     def find_num_in_queue(self, dt):
         hour = math.floor(dt.hour / 4)
         minute = dt.minute
@@ -108,6 +109,5 @@ class Model:
         return len(min_in_queue)
 
     def estimate_waiting_time(self, dt):
-        wait_time = self.find_num_in_queue(dt) * self.departure_rate/self.servers
-
+        wait_time = self.find_num_in_queue(dt) / (self.servers*self.departure_rate)
         return wait_time

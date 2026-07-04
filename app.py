@@ -128,11 +128,11 @@ if "last_block_saf" not in st.session_state:
     st.session_state.model_saf = None
 
 if st.session_state.last_block_auc != current_block_auc:
-    st.session_state.model_auc = queueing.Model(datetime.now(), "AUC")
+    st.session_state.model_auc = queueing.Model(current_time, "AUC")
     st.session_state.last_block_auc = current_block_auc
 
 if st.session_state.last_block_saf != current_block_saf:
-    st.session_state.model_saf = queueing.Model(datetime.now(), "SAF")
+    st.session_state.model_saf = queueing.Model(current_time, "SAF")
     st.session_state.last_block_saf = current_block_saf
 
 
@@ -142,8 +142,8 @@ else:
     model = st.session_state.model_saf
 
 
-wait_time = round(model.estimate_waiting_time(datetime.now()), 2)
-queue = model.find_num_in_queue(datetime.now())
+wait_time = round(model.estimate_waiting_time(current_time), 2)
+queue = model.find_num_in_queue(current_time)
 arrivals = round(model.arrival_rate * 60, 2)
 server = model.servers
 max_wait = max(model.max_wait, wait_time)
