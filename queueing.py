@@ -82,9 +82,10 @@ class Model:
 
             # Calculate the average wait time using pandas (optional, but highly recommended)
             df = pd.DataFrame(records)
-            self.waiting_time = round(df['waiting_time'].mean(), 3)
+            self.waiting_time = round(df['waiting_time'].mean(), 2)
             L = self.waiting_time * self.arrival_rate
-            self.L = round(L, 3)
+            self.L = math.ceil(L)
+            self.max_wait = round(df['waiting_time'].max(), 2)
 
 
 

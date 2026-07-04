@@ -94,6 +94,27 @@ section[data-testid="stSidebar"] .stAlert {
 """, unsafe_allow_html=True)
 
 # =========================
+# SIDEBAR
+# =========================
+st.sidebar.title("🛫 AIRPORT CONTROL PANEL")
+
+airport = st.sidebar.radio("Select Airport", ["AUC", "SAF"])
+mode = st.sidebar.toggle("Simulation Mode", True)
+
+st.sidebar.markdown("---")
+st.sidebar.info("System Live 🟢")
+
+# =========================
+# LIVE DATA
+# =========================
+model = queueing.Model(datetime.now(), airport)
+wait_time = model.waiting_time
+queue = model.L
+arrivals = model.arrival_rate
+server = model.servers
+max_wait = model.max_wait
+
+# =========================
 # TITLE
 # =========================
 st.markdown("<div class='title'>✈ Airport Operations Dashboard </div>", unsafe_allow_html=True)
@@ -103,12 +124,13 @@ st.markdown("<div class='title'>✈ Airport Operations Dashboard </div>", unsafe
 # =========================
 last_updated = datetime.now().strftime("%H:%M:%S")
 
+
 col1, col2 = st.columns([3, 1])
 
 with col1:
     st.markdown(f"""
     <div class="header-box">
-        <b>Airport:</b> AUC<br>
+        <b>Airport:</b> {airport}<br>
         <b>Status:</b> 🟢 Live System<br>
         <b>Last Updated:</b> {last_updated} <b><b><b>or Updated every 30 Seconds 
     </div>
@@ -129,16 +151,9 @@ with col2:
 
 st.markdown("---")
 
-# =========================
-# SIDEBAR
-# =========================
-st.sidebar.title("🛫 AIRPORT CONTROL PANEL")
 
-airport = st.sidebar.radio("Select Airport", ["AUC", "SAF"])
-mode = st.sidebar.toggle("Simulation Mode", True)
 
-st.sidebar.markdown("---")
-st.sidebar.info("System Live 🟢")
+
 
 # =========================
 # SYSTEM OVERVIEW (FIXED UI)
@@ -162,7 +177,7 @@ with col1:
     """, unsafe_allow_html=True)
 
 with col2:
-    st.markdown("""
+    st.markdown(f"""
     <div style="
         background-color: skyblue;
         padding: 15px;
@@ -170,24 +185,15 @@ with col2:
         box-shadow: 0 2px 10px rgba(0,0,0,0.06);
         color: #0F172A;
     ">
-        🚦 Security Checkpoints: <b style="color:#1E3A8A;">3 Active</b>
+        🚦 Servers: <b style="color:#1E3A8A;">{server}</b>
     </div>
     """, unsafe_allow_html=True)
 
-# =========================
-# LIVE DATA
-# =========================
-model = queueing.Model(datetime.now(), airport)
-wait_time = model.waiting_time
-queue = model.L
-arrivals = model.arrival_rate
-server = model.servers
 
 # =========================
 # KPI ROW
 # =========================
 c1, c2, c3, c4 = st.columns(4)
-
 
 def kpi(label, value):
     st.markdown(f"""
@@ -196,7 +202,6 @@ def kpi(label, value):
         <div class="kpi-value">{value}</div>
     </div>
     """, unsafe_allow_html=True)
-
 
 with c1:
     kpi("WAIT TIME (CORE)", f"{wait_time} min")
@@ -208,7 +213,7 @@ with c3:
     kpi("Passengers/hr", arrivals)
 
 with c4:
-    kpi("Number of Servers", server)
+    kpi("Maximum Wait Time", f"{max_wait} min")
 
 st.markdown("---")
 
