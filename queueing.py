@@ -91,7 +91,11 @@ class Model:
             self.max_wait = round(df['waiting_time'].max(), 2)
             self.Q = df
 
-            df.to_csv("output.csv", index=False)
+            if air == "AUC":
+                df.to_csv("output_auc.csv", index=False)
+
+            if air == "SAF":
+                df.to_csv("output_saf.csv", index=False)
 
     def find_num_in_queue(self, dt):
         hour = math.floor(dt.hour / 4)
