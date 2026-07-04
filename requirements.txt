@@ -4,4 +4,3 @@ pandas
 plotly
 streamlit-autorefresh
 ciw
-math
