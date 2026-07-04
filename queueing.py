@@ -99,7 +99,7 @@ class Model:
 
 
     def find_num_in_queue(self, dt):
-        hour = math.floor(dt.hour / 4)
+        hour = dt.hour % 4
         minute = dt.minute
 
         time = hour * 60 + minute
