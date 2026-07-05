@@ -114,6 +114,6 @@ class Model:
     def estimate_waiting_time(self, dt):
 
         if self.servers == 0 or self.departure_rate == 0:
-            return "N/A"
+            return 0
         wait_time = self.find_num_in_queue(dt) / (self.servers*self.departure_rate)
         return wait_time
