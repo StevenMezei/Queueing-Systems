@@ -64,6 +64,7 @@ class Model:
             self.L = 0
             self.waiting_time = 0
             self.servers = 0
+            self.max_wait = 0
 
         else:
             self.arrival_rate = arrival_rate
